@@ -28,46 +28,65 @@ button:hover { background-color: #218838; }
 const GEMINI_API_KEY = "AIzaSyA33YcJ96cUBiskUrlxqPZEZWCcb2DjB7k";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRglD7R7mpegBmtmaBp7zosTHWe1oInTl_MK8GjC_8QkDrR6sVDod5BnF4b8Vp8YNAOA/exec";
 async function prosesBorang() {
-const nama = document.getElementById('nama').value;
-const kelas = document.getElementById('kelas').value;
-const hobi = document.getElementById('hobi').value;
-const resultText = document.getElementById('aiResult');
-if(!nama || !kelas || !hobi) {
-alert("Sila isi semua maklumat!");
-return;
-}
-resultText.innerText = "AI sedang berfikir...";
-// 1. Tanya AI Studio (Gemini)
-const aiPrompt = "Pelajar ini mempunyai hobi: " + hobi + ". Berikan SATU nama kelab sekolah di Malaysia yang paling sesuai untuknya. Jawab dengan nama kelab sahaja tanpa penerangan panjang.";
-try {
-const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-contents: [{ parts: [{ text: aiPrompt }] }]
-})
-});
-const aiData = await aiResponse.json();
-const kelabCadangan = aiData.candidates[0].content.parts[0].text.trim();
-resultText.innerText = "Kelab yang didaftarkan: " + kelabCadangan;
-// 2. Hantar data ke Google Sheets
-await fetch(APPS_SCRIPT_URL, {
-method: 'POST',
-mode: 'no-cors', // Penting untuk elak ralat CORS
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-nama: nama,
-kelas: kelas,
-hobi: hobi,
-kelab: kelabCadangan
-})
-});
-alert("Pendaftaran berjaya disimpan dalam Google Sheets!");
-} catch (error) {
-resultText.innerText = "Ralat berlaku. Sila cuba lagi.";
-console.error(error);
-}
-}
+        const nama = document.getElementById('nama').value;
+        const kelas = document.getElementById('kelas').value;
+        const hobi = document.getElementById('hobi').value;
+        const resultText = document.getElementById('aiResult');
+
+        if(!nama || !kelas || !hobi) {
+            alert("Sila isi semua maklumat!");
+            return;
+        }
+
+        resultText.innerText = "AI sedang berfikir...";
+
+        const aiPrompt = "Pelajar ini mempunyai hobi: " + hobi + ". Berikan SATU nama kelab sekolah di Malaysia yang paling sesuai untuknya. Jawab dengan nama kelab sahaja tanpa penerangan panjang.";
+        
+        try {
+            // URL KEMASKINI: Menggunakan v1/models/gemini-1.5-flash:generateContent
+            const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({
+                    contents: [{ 
+                        parts: [{ 
+                            text: aiPrompt 
+                        }] 
+                    }]
+                })
+            });
+
+            // Semak jika respon dari Google tidak OK (Contoh: 404 atau 400)
+            if (!aiResponse.ok) {
+                throw new Error(`Ralat API Google: ${aiResponse.status}`);
+            }
+
+            const aiData = await aiResponse.json();
+            const kelabCadangan = aiData.candidates[0].content.parts[0].text.trim();
+            resultText.innerText = "Kelab yang didaftarkan: " + kelabCadangan;
+
+            // 2. Hantar data ke Google Sheets
+            await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nama: nama,
+                    kelas: kelas,
+                    hobi: hobi,
+                    kelab: kelabCadangan
+                })
+            });
+
+            alert("Pendaftaran berjaya disimpan dalam Google Sheets!");
+
+        } catch (error) {
+            resultText.innerText = "Ralat berlaku: " + error.message;
+            console.error(error);
+        }
+    }
 </script>
 </body>
 </html>
